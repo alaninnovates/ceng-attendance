@@ -5,6 +5,7 @@
 
 CoordMode "Mouse", "Screen"
 
+TraySetIcon "./CENG.png"
 ca_Gui := Gui(, "CENG Attendance")
 
 stuList := []
@@ -24,6 +25,12 @@ detectedListView := ca_Gui.Add("ListView", "x220 y50 w200 h300", ["ID", "Detecte
 ca_Gui.Add("Text", "x430 y30 w100 h30", "Unknown Names:")
 unknownListView := ca_Gui.Add("ListView", "x430 y50 w200 h300", ["Student Name"])
 
+quitButton := ca_Gui.Add("Button", "x10 y360 w100 h30", "Quit")
+quitButton.OnEvent("Click", quitButton_Click)
+
+clearAllButton := ca_Gui.Add("Button", "x420 y360 w100 h30", "Clear All")
+clearAllButton.OnEvent("Click", clearAll_Click)
+
 exportButton := ca_Gui.Add("Button", "x530 y360 w100 h30", "Export")
 exportButton.OnEvent("Click", exportButton_Click)
 
@@ -42,10 +49,24 @@ pasteStuList_Click(*) {
     }
 }
 
+quitButton_Click(*) {
+    ExitApp
+}
+
 clearStuList_Click(*) {
     global stuList
     stuList := []
     stuListView.Delete()
+}
+
+clearAll_Click(*) {
+    global stuList, detectedStuList, attendanceStuList
+    stuList := []
+    detectedStuList := []
+    attendanceStuList := []
+    stuListView.Delete()
+    detectedListView.Delete()
+    unknownListView.Delete()
 }
 
 takeAttendance_Click(*) {
@@ -54,6 +75,7 @@ takeAttendance_Click(*) {
     WinActivate ca_Gui.Hwnd
     detectedListView.Delete()
     unknownNames := []
+    prevFirstNames := []
     for i, stu in detectedStuList {
         ; find student in stuList
         ; lowercase name, split by space, compare first name and last name seperately
@@ -66,6 +88,9 @@ takeAttendance_Click(*) {
                 lastNameEqual := StrLower(stuName[2]) = StrLower(stu2Name[2])
             }
             if (firstNameEqual) {
+                if (ca_ArrContains(prevFirstNames, stu2.name) && lastNameEqual) {
+                    break
+                }
                 attendanceStuList.Push(stu2.name)
                 detectedListView.Add(, stu2.id, stu2.name)
                 break
@@ -88,6 +113,7 @@ takeAttendance_Click(*) {
             }
             selectedId := selected.selectedStudent
             ; MsgBox "Selected: " . selectedId . " " . infonb
+            attendanceStuList.Push(stuList[selectedId].name)
             detectedListView.Add(, selectedId, stuList[selectedId].name)
         }
     }
@@ -127,14 +153,14 @@ exportButton_Click(*) {
     exportStuList := []
     ; IN if student exists, OUT if student does not exist
     for i, stu in stuList {
-        if (attendanceStuList.Contains(stu)) {
+        if (ca_ArrContains(attendanceStuList, stu.name)) {
             exportStuList.Push("IN")
         } else {
             exportStuList.Push("OUT")
         }
     }
     A_Clipboard := ca_ArrJoin(exportStuList, "`n")
-    MsgBox "Exported to clipboard: " . exportStuList
+    MsgBox "Exported to clipboard: " . A_Clipboard
 }
 
 ca_Gui.Show()
